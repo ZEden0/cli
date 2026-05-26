@@ -132,6 +132,17 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 
 返回中可能含 `<sheet>`、`<bitable>`、`<cite file-type="sheets|bitable">`。内部数据无法通过 `docs +fetch --api-version v2` 获取，提取 `token` 等属性后切到 [`lark-sheets`](../../lark-sheets/SKILL.md) / [`lark-base`](../../lark-base/SKILL.md) 下钻，详见 [SKILL.md 快速决策](../SKILL.md) 路由表。
 
+## 子页面列表（sub-page-list）
+
+仅 wiki 文档支持子页面列表。
+
+```xml
+<sub-page-list wiki-token="W1" space-id="S1" has-more="true">
+  <sub-page title="..." doc-id="..." file-type="..."/>
+  ...
+</sub-page-list>
+```
+
 ## 参考
 
 - [lark-doc-create](lark-doc-create.md) — 创建文档
