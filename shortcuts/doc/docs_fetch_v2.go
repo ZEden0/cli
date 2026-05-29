@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/larksuite/cli/internal/i18n"
 	"github.com/larksuite/cli/shortcuts/common"
 )
 
@@ -19,6 +20,7 @@ func v2FetchFlags() []common.Flag {
 		{Name: "doc-format", Desc: "content format", Hidden: true, Default: "xml", Enum: []string{"xml", "markdown"}},
 		{Name: "detail", Desc: "export detail level: simple (read-only) | with-ids (block IDs for cross-referencing) | full (all attrs for editing)", Hidden: true, Default: "simple", Enum: []string{"simple", "with-ids", "full"}},
 		{Name: "revision-id", Desc: "document revision (-1 = latest)", Hidden: true, Type: "int", Default: "-1"},
+		{Name: "lang", Desc: "document content language, e.g. zh_cn/en_us/ja_jp (also accepts zh/en/ja)"},
 		{Name: "scope", Desc: "partial read scope: outline | range | keyword | section (omit to read whole doc)", Default: "full", Enum: []string{"full", "outline", "range", "keyword", "section"}},
 		{Name: "start-block-id", Desc: "range/section mode: start (anchor) block id"},
 		{Name: "end-block-id", Desc: "range mode: end block id; \"-1\" = to end of document"},
@@ -42,6 +44,7 @@ func validateFetchV2(_ context.Context, runtime *common.RuntimeContext) error {
 	if err := validateReadModeFlags(runtime); err != nil {
 		return err
 	}
+	warnInvalidFetchLang(runtime)
 	return nil
 }
 
@@ -85,6 +88,9 @@ func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 	if v := runtime.Int("revision-id"); v > 0 {
 		body["revision_id"] = v
 	}
+	if lang := fetchBodyLang(runtime); lang != "" {
+		body["lang"] = string(lang)
+	}
 
 	detail := runtime.Str("detail")
 	switch detail {
@@ -112,6 +118,45 @@ func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 	injectDocsScene(runtime, body)
 
 	return body
+}
+
+func fetchBodyLang(runtime *common.RuntimeContext) i18n.Lang {
+	if runtime == nil {
+		return ""
+	}
+	if runtime.Changed("lang") {
+		lang, ok := normalizeFetchLang(runtime.Str("lang"))
+		if ok {
+			return lang
+		}
+		return ""
+	}
+	if runtime.Config == nil {
+		return ""
+	}
+	return runtime.Lang()
+}
+
+func normalizeFetchLang(raw string) (i18n.Lang, bool) {
+	normalized := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(raw), "-", "_"))
+	if normalized == "" {
+		return "", true
+	}
+	return i18n.Parse(normalized)
+}
+
+func warnInvalidFetchLang(runtime *common.RuntimeContext) {
+	if runtime == nil || !runtime.Changed("lang") {
+		return
+	}
+	raw := runtime.Str("lang")
+	if _, ok := normalizeFetchLang(raw); ok {
+		return
+	}
+	if runtime.Factory == nil || runtime.Factory.IOStreams == nil || runtime.Factory.IOStreams.ErrOut == nil {
+		return
+	}
+	fmt.Fprintf(runtime.IO().ErrOut, "warning: unsupported --lang %q; falling back to default language\n", raw)
 }
 
 // buildReadOption 拼装 read_option JSON；full/空模式返回 nil，让服务端走默认全文路径。

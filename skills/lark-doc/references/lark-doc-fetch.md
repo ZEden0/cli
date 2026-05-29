@@ -102,6 +102,7 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 | `--api-version` | 是 | 固定传 `v2` |
 | `--doc` | 是 | 文档 URL 或 token（支持 `/docx/` 和 `/wiki/`） |
 | `--doc-format` | 否 | `xml`（默认）\| `markdown` \| `text` |
+| `--lang` | 否 | 内容语言，如 `zh_cn` / `en_us` / `ja_jp`；也接受短码 `zh` / `en` / `ja` 和大小写/连字符变体。不传时使用 CLI runtime context 的语言偏好；不支持的值会 warning 后按默认语言读取 |
 | `--detail` | 否 | `simple`（默认）\| `with-ids` \| `full` |
 | `--revision-id` | 否 | 文档版本号，`-1` = 最新（默认） |
 | `--scope` | 否 | `outline` \| `range` \| `keyword` \| `section`（省略 = 读整篇） |
