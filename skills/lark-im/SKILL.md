@@ -1,7 +1,7 @@
 ---
 name: lark-im
 version: 1.0.0
-description: "飞书即时通讯：收发消息和管理群聊。发送和回复消息、搜索聊天记录、管理群聊成员、上传下载图片和文件（支持大文件分片下载）、管理表情回复。当用户需要发消息、查看或搜索聊天记录、下载聊天中的文件、查看群成员、搜索群、创建群聊或话题群、管理标记数据时使用。"
+description: "飞书即时通讯：收发消息和管理群聊。发送和回复消息、搜索聊天记录、管理群聊成员、上传下载图片和文件（支持大文件分片下载）、管理表情回复、发送应用内/短信/电话加急。当用户需要发消息、查看或搜索聊天记录、下载聊天中的文件、查看群成员、搜索群、创建群聊或话题群、管理标记数据时使用。"
 metadata:
   requires:
     bins: ["lark-cli"]
@@ -46,6 +46,10 @@ When using bot identity (`--as bot`) to fetch messages (e.g. `+chat-messages-lis
 **Root cause**: The bot's app visibility settings do not include the message sender, so the contact API returns no name.
 
 **Solution**: Check the app's visibility settings in the Lark Developer Console — ensure the app's visible range covers the users whose names need to be resolved. Alternatively, use `--as user` to fetch messages with user identity, which typically has broader contact access.
+
+### Default message enrichment (reactions / update_time)
+
+The four message-pulling shortcuts (`+messages-mget`, `+chat-messages-list`, `+messages-search`, `+threads-messages-list`) automatically attach a `reactions` block and (for edited messages) `update_time` to each returned message — no separate `im.reactions.batch_query` call is needed. Pass `--no-reactions` to opt out. For the full contract (output shape, the `im:message.reactions:read` scope requirement, and the "missing field ≠ fetch failure" data rules), read [`references/lark-im-message-enrichment.md`](references/lark-im-message-enrichment.md).
 
 ### Card Messages (Interactive)
 
@@ -112,6 +116,9 @@ lark-cli im <resource> <method> [flags] # 调用 API
   - `forward` — 转发消息。Identity: supports `user` and `bot`.
   - `merge_forward` — 合并转发消息。Identity: `bot` only (`tenant_access_token`).
   - `read_users` — 查询消息已读信息。Identity: `bot` only (`tenant_access_token`); the bot must be in the chat, and can only query read status for messages it sent within the last 7 days.
+  - `urgent_app` — 发送应用内加急。Identity: `bot` only (`tenant_access_token`); the bot must be the message sender and must be in the conversation that contains the message.
+  - `urgent_phone` — 发送电话加急。Identity: `bot` only (`tenant_access_token`); the bot must be the message sender and must be in the conversation that contains the message.
+  - `urgent_sms` — 发送短信加急。Identity: `bot` only (`tenant_access_token`); the bot must be the message sender and must be in the conversation that contains the message.
 
 ### reactions
 
@@ -150,11 +157,14 @@ lark-cli im <resource> <method> [flags] # 调用 API
 | `messages.forward` | `im:message` |
 | `messages.merge_forward` | `im:message` |
 | `messages.read_users` | `im:message:readonly` |
-| `threads.forward` | `im:message` |
+| `messages.urgent_app` | `im:message.urgent` |
+| `messages.urgent_phone` | `im:message.urgent:phone` |
+| `messages.urgent_sms` | `im:message.urgent:sms` |
 | `reactions.batch_query` | `im:message.reactions:read` |
 | `reactions.create` | `im:message.reactions:write_only` |
 | `reactions.delete` | `im:message.reactions:write_only` |
 | `reactions.list` | `im:message.reactions:read` |
+| `threads.forward` | `im:message` |
 | `images.create` | `im:resource` |
 | `pins.create` | `im:message.pins:write_only` |
 | `pins.delete` | `im:message.pins:write_only` |

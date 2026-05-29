@@ -2,6 +2,116 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.43] - 2026-05-28
+
+### Features
+
+- **event**: Support `note` generated event (#1159)
+- **config**: Decouple `--lang` preference from TUI display language (#1132)
+- **mail**: Add HTML lint library with Larksuite-native autofix for `lark-mail` (#1019)
+
+### Bug Fixes
+
+- **config**: Propagate `Lang` across credential boundary; respect `CurrentApp` in priorLang (#1157)
+- **config**: Allow lark-channel bind source override (#1154)
+- **im**: Clarify `messages-send` dry-run chat membership (#1150)
+- **base**: Include `log_id` in attachment media errors (#1133)
+
+### Performance
+
+- **im**: Parallelize reactions, thread_replies, and merge_forward fetches (#1146)
+
+### Documentation
+
+- **im**: Update IM skill urgent APIs (#1153)
+
+## [v1.0.42] - 2026-05-27
+
+### Features
+
+- **mail**: Add `+draft-send` shortcut for batch draft sending (#1017)
+- **im**: Enrich messages with reactions and output `update_time` (#1095)
+- **schema**: Output JSON spec envelope for all API commands (#1048)
+- **event**: Support `vc` / `note` / `minute` events (#1113)
+- **drive**: Add secure label shortcuts (#985)
+- **affordance**: Use description and command in affordance example schema (#1126)
+
+### Bug Fixes
+
+- **docs**: Remove unsupported `fetch` text format (#1109)
+
+### Refactor
+
+- **auth**: Drop duplicate top-level user fields in `status` (#1128)
+
+### Documentation
+
+- **doc**: Document block anchor URLs in `lark-doc` skill (#1120)
+- **whiteboard**: Improve SVG/Mermaid instructions (#1097)
+
+## [v1.0.41] - 2026-05-26
+
+### Features
+
+- **minutes**: Add minutes edit shortcuts (#1036)
+- **minutes**: Get minutes keywords (#1079)
+- **slides**: Support importing pptx as slides (#1068)
+- **config**: Add `keychain-downgrade` subcommand (macOS) (#1085)
+- **errors**: Add structured CLI error contract (#984)
+- **apps**: Replace `+html-publish` cwd hard-reject with credential-file scan (#1072)
+
+### Bug Fixes
+
+- **drive**: Support doubao drive inspect URL variants (#1106)
+- **skills**: Sync skills incrementally during update (#1042)
+- **apps**: Read app object from `data.app` for `+create` and `+update` (#1087)
+- **common**: Escape special chars in multipart form filenames (#1037)
+- **auth**: Remove fenced code block guidance from auth URL output hints (#1088)
+
+### Documentation
+
+- **skills**: Fix agent routing for doubao.com URLs (#1082)
+- **task**: Require `--complete=false` for pending standup summaries (#1101)
+- **base**: Document UI-only field settings (#1078)
+- **contributing**: Clarify contributor guidance (#1096)
+
+## [v1.0.40] - 2026-05-25
+
+### Features
+
+- **wiki**: Add exponential backoff retry for `+node-create` lock contention (#1012)
+- **auth**: Add `auth qrcode` subcommand and update auth docs/hints (#968)
+
+### Bug Fixes
+
+- **wiki**: Rename `+node-get --token` to `--node-token`, keep alias (#1074)
+- **output**: Classify wiki lock-contention error (131009) with retry hint (#1014)
+- **contact**: Add actionable hint when fanout search all-fail with no API code (#1054)
+- **permission**: Annotate auto-grant permission failures with `required_scope` and `console_url` (#1045)
+- **validation**: Use `ErrValidation` instead of `fmt.Errorf` in `Validate` paths (#1001)
+
+### Documentation
+
+- **skills**: Add 云盘/云存储 alias alongside 云空间 for agent clarity (#1073)
+- **task**: Refresh `lark-task` shortcut docs (#1057)
+
+## [v1.0.39] - 2026-05-22
+
+### Features
+
+- **slides**: Add `+export` shortcut to export slides (#988)
+- **sidecar**: Support multi-client identity isolation in `server-demo` via per-client HMAC keys, preventing UAT cross-contamination when multiple CLI sandboxes share one sidecar (#934)
+- **im**: Support Markdown image rendering in post content (#893)
+
+### Bug Fixes
+
+- **scope**: Add 22 new scope entries to scope priorities (#1050)
+
+### Documentation
+
+- **base**: Update location `full_address` guidance (#754)
+- **apps**: Refine `lark-apps` skill description and surface, document `index.html` / `--path` hard constraints (#1040)
+
 ## [v1.0.38] - 2026-05-22
 
 ### Features
@@ -823,6 +933,11 @@ Bundled AI agent skills for intelligent assistance:
 - Bilingual documentation (English & Chinese).
 - CI/CD pipelines: linting, testing, coverage reporting, and automated releases.
 
+[v1.0.43]: https://github.com/larksuite/cli/releases/tag/v1.0.43
+[v1.0.42]: https://github.com/larksuite/cli/releases/tag/v1.0.42
+[v1.0.41]: https://github.com/larksuite/cli/releases/tag/v1.0.41
+[v1.0.40]: https://github.com/larksuite/cli/releases/tag/v1.0.40
+[v1.0.39]: https://github.com/larksuite/cli/releases/tag/v1.0.39
 [v1.0.38]: https://github.com/larksuite/cli/releases/tag/v1.0.38
 [v1.0.37]: https://github.com/larksuite/cli/releases/tag/v1.0.37
 [v1.0.36]: https://github.com/larksuite/cli/releases/tag/v1.0.36
