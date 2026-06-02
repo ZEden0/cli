@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	larkcore "github.com/larksuite/oapi-sdk-go/v3/core"
+
+	"github.com/larksuite/cli/internal/i18n"
 	"github.com/larksuite/cli/shortcuts/common"
 )
 
@@ -18,6 +21,7 @@ func v2FetchFlags() []common.Flag {
 	return []common.Flag{
 		{Name: "doc-format", Desc: "content format", Hidden: true, Default: "xml", Enum: []string{"xml", "markdown"}},
 		{Name: "detail", Desc: "export detail level: simple (read-only) | with-ids (block IDs for cross-referencing) | full (all attrs for editing)", Hidden: true, Default: "simple", Enum: []string{"simple", "with-ids", "full"}},
+		{Name: "lang", Desc: "localized user cite language (e.g. zh, en, ja, zh_cn, en-US)"},
 		{Name: "revision-id", Desc: "document revision (-1 = latest)", Hidden: true, Type: "int", Default: "-1"},
 		{Name: "scope", Desc: "partial read scope: outline | range | keyword | section (omit to read whole doc)", Default: "full", Enum: []string{"full", "outline", "range", "keyword", "section"}},
 		{Name: "start-block-id", Desc: "range/section mode: start (anchor) block id"},
@@ -49,12 +53,20 @@ func dryRunFetchV2(_ context.Context, runtime *common.RuntimeContext) *common.Dr
 	// Validate has already accepted --doc; parseDocumentRef cannot fail here.
 	ref, _ := parseDocumentRef(runtime.Str("doc"))
 	body := buildFetchBody(runtime)
+	_, warning := resolveFetchLang(runtime)
 	apiPath := fmt.Sprintf("/open-apis/docs_ai/v1/documents/%s/fetch", ref.Token)
-	return common.NewDryRunAPI().
+	dryRun := common.NewDryRunAPI().
 		POST(apiPath).
 		Desc("OpenAPI: fetch document").
 		Body(body).
 		Set("document_id", ref.Token)
+	if params := buildFetchDryRunParams(runtime); len(params) > 0 {
+		dryRun.Params(params)
+	}
+	if warning != "" {
+		dryRun.Set("warnings", []string{warning})
+	}
+	return dryRun
 }
 
 func executeFetchV2(_ context.Context, runtime *common.RuntimeContext) error {
@@ -62,10 +74,16 @@ func executeFetchV2(_ context.Context, runtime *common.RuntimeContext) error {
 
 	apiPath := fmt.Sprintf("/open-apis/docs_ai/v1/documents/%s/fetch", ref.Token)
 	body := buildFetchBody(runtime)
+	query := buildFetchQueryParams(runtime)
+	_, warning := resolveFetchLang(runtime)
 
-	data, err := doDocAPI(runtime, "POST", apiPath, body)
+	data, err := runtime.DoAPIJSONWithLogID("POST", apiPath, query, body)
 	if err != nil {
 		return err
+	}
+	appendFetchWarnings(data, warning)
+	if warning != "" {
+		fmt.Fprintf(runtime.IO().ErrOut, "warning: %s\n", warning)
 	}
 
 	runtime.OutFormatRaw(data, nil, func(w io.Writer) {
@@ -81,6 +99,9 @@ func executeFetchV2(_ context.Context, runtime *common.RuntimeContext) error {
 func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 	body := map[string]interface{}{
 		"format": runtime.Str("doc-format"),
+	}
+	if lang, _ := resolveFetchLang(runtime); lang != "" {
+		body["lang"] = lang
 	}
 	if v := runtime.Int("revision-id"); v > 0 {
 		body["revision_id"] = v
@@ -112,6 +133,75 @@ func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 	injectDocsScene(runtime, body)
 
 	return body
+}
+
+func buildFetchQueryParams(runtime *common.RuntimeContext) larkcore.QueryParams {
+	lang, _ := resolveFetchLang(runtime)
+	if lang == "" {
+		return nil
+	}
+	return larkcore.QueryParams{"lang": []string{lang}}
+}
+
+func buildFetchDryRunParams(runtime *common.RuntimeContext) map[string]interface{} {
+	lang, _ := resolveFetchLang(runtime)
+	if lang == "" {
+		return nil
+	}
+	return map[string]interface{}{"lang": lang}
+}
+
+func resolveFetchLang(runtime *common.RuntimeContext) (string, string) {
+	raw := strings.TrimSpace(runtime.Str("lang"))
+	if raw != "" {
+		if lang, ok := parseFetchLang(raw); ok {
+			return string(lang), ""
+		}
+		return "", fmt.Sprintf("unsupported_lang: --lang %q is not supported; falling back to default user names", raw)
+	}
+	if runtime.Config != nil {
+		if lang := runtime.Lang(); lang != "" {
+			return string(lang), ""
+		}
+	}
+	return "", ""
+}
+
+func parseFetchLang(raw string) (i18n.Lang, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(raw))
+	normalized = strings.ReplaceAll(normalized, "-", "_")
+	if normalized == "jp" {
+		normalized = "ja"
+	}
+	return i18n.Parse(normalized)
+}
+
+func appendFetchWarnings(data map[string]interface{}, warnings ...string) {
+	if data == nil {
+		return
+	}
+	var filtered []string
+	for _, warning := range warnings {
+		if warning != "" {
+			filtered = append(filtered, warning)
+		}
+	}
+	if len(filtered) == 0 {
+		return
+	}
+	switch existing := data["warnings"].(type) {
+	case []string:
+		data["warnings"] = append(existing, filtered...)
+	case []interface{}:
+		out := make([]interface{}, 0, len(existing)+len(filtered))
+		out = append(out, existing...)
+		for _, warning := range filtered {
+			out = append(out, warning)
+		}
+		data["warnings"] = out
+	default:
+		data["warnings"] = filtered
+	}
 }
 
 // buildReadOption 拼装 read_option JSON；full/空模式返回 nil，让服务端走默认全文路径。
