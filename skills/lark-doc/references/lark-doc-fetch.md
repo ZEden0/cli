@@ -12,6 +12,9 @@ lark-cli docs +fetch --api-version v2 --doc "https://xxx.feishu.cn/docx/Z1Fj...t
 # Markdown 格式
 lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --doc-format markdown
 
+# 指定用户 cite 展示名语言
+lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --doc-format markdown --lang en
+
 # 带 block ID（用于后续 block 级更新）
 lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --detail with-ids
 
@@ -103,6 +106,7 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 | `--doc` | 是 | 文档 URL 或 token（支持 `/docx/` 和 `/wiki/`） |
 | `--doc-format` | 否 | `xml`（默认）\| `markdown` \| `text` |
 | `--detail` | 否 | `simple`（默认）\| `with-ids` \| `full` |
+| `--lang` | 否 | v2 fetch 专用，控制 `<cite type="user">` 的 `user-name` 展示语言；支持 `zh`/`zh_cn`、`en`/`en_us`、`ja`/`ja_jp` 等 catalog 语言写法，非法值不阻断请求但会 warning 并回退默认用户名 |
 | `--revision-id` | 否 | 文档版本号，`-1` = 最新（默认） |
 | `--scope` | 否 | `outline` \| `range` \| `keyword` \| `section`（省略 = 读整篇） |
 | `--start-block-id` | 否 | `range`/`section` 起始/锚点 id（`section` 必填） |
