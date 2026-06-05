@@ -15,6 +15,7 @@ import (
 // legacy validation/save helpers are forbidden; callers must use the typed
 // common replacements or construct an errs.* typed error directly.
 var migratedCommonHelperPaths = []string{
+	"shortcuts/base/",
 	"shortcuts/drive/",
 	"shortcuts/mail/",
 }
