@@ -34,7 +34,8 @@ func TestDocs_CoverWorkflow(t *testing.T) {
 	folderToken := drive.CreateDriveFolder(t, parentT, ctx, folderName, defaultAs, "")
 	docToken := createDocWithRetry(t, parentT, ctx, folderToken, docTitle, "# Cover\n\nCover workflow fixture.", defaultAs)
 
-	imagePath := filepath.Join(t.TempDir(), "cover.png")
+	imageDir := t.TempDir()
+	imagePath := filepath.Join(imageDir, "cover.png")
 	writeDocCoverFixturePNG(t, imagePath)
 
 	var coverToken string
@@ -42,12 +43,13 @@ func TestDocs_CoverWorkflow(t *testing.T) {
 		result, err := clie2e.RunCmd(ctx, clie2e.Request{
 			Args: []string{
 				"docs", "+media-upload",
-				"--file", imagePath,
+				"--file", "./cover.png",
 				"--parent-type", "docx_image",
 				"--parent-node", docToken,
 				"--doc-id", docToken,
 			},
 			DefaultAs: defaultAs,
+			WorkDir:   imageDir,
 		})
 		require.NoError(t, err)
 		result.AssertExitCode(t, 0)
