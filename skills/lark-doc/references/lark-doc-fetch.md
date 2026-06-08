@@ -29,6 +29,9 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 # 按关键词定位（多关键词用 | 分隔，任一命中即返回）
 lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
   --scope keyword --keyword "部署|发布|上线"
+
+# 指定导出中 @人/cite 用户名的展示语言；不传时使用当前 profile 的语言偏好
+lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --lang en_us
 ```
 
 ## 选 `--detail`（每块详细度）
@@ -103,6 +106,7 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 | `--doc` | 是 | 文档 URL 或 token（支持 `/docx/` 和 `/wiki/`） |
 | `--doc-format` | 否 | `xml`（默认）\| `markdown` \| `text` |
 | `--detail` | 否 | `simple`（默认）\| `with-ids` \| `full` |
+| `--lang` | 否 | 导出中 `<cite type="user">` 用户名的展示语言（如 `zh_cn` / `en_us`）；不传时使用当前 profile 的语言偏好；无法识别时由服务端按默认用户名兜底 |
 | `--revision-id` | 否 | 文档版本号，`-1` = 最新（默认） |
 | `--scope` | 否 | `outline` \| `range` \| `keyword` \| `section`（省略 = 读整篇） |
 | `--start-block-id` | 否 | `range`/`section` 起始/锚点 id（`section` 必填） |

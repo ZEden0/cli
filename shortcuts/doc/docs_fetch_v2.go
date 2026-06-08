@@ -18,6 +18,7 @@ func v2FetchFlags() []common.Flag {
 	return []common.Flag{
 		{Name: "doc-format", Desc: "content format", Hidden: true, Default: "xml", Enum: []string{"xml", "markdown"}},
 		{Name: "detail", Desc: "export detail level: simple (read-only) | with-ids (block IDs for cross-referencing) | full (all attrs for editing)", Hidden: true, Default: "simple", Enum: []string{"simple", "with-ids", "full"}},
+		{Name: "lang", Desc: "override cite user display language (e.g. zh_cn, en_us); defaults to configured profile language"},
 		{Name: "revision-id", Desc: "document revision (-1 = latest)", Hidden: true, Type: "int", Default: "-1"},
 		{Name: "scope", Desc: "partial read scope: outline | range | keyword | section (omit to read whole doc)", Default: "full", Enum: []string{"full", "outline", "range", "keyword", "section"}},
 		{Name: "start-block-id", Desc: "range/section mode: start (anchor) block id"},
@@ -108,6 +109,11 @@ func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 
 	if ro := buildReadOption(runtime); ro != nil {
 		body["read_option"] = ro
+	}
+	if lang := strings.TrimSpace(runtime.Str("lang")); lang != "" {
+		body["lang"] = lang
+	} else if lang := runtime.Lang(); lang != "" {
+		body["lang"] = string(lang)
 	}
 	injectDocsScene(runtime, body)
 

@@ -7,6 +7,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/larksuite/cli/internal/core"
+	"github.com/larksuite/cli/internal/i18n"
 	"github.com/larksuite/cli/shortcuts/common"
 	"github.com/spf13/cobra"
 )
@@ -58,10 +60,64 @@ func TestBuildFetchBodyOmitsEmptyScene(t *testing.T) {
 	}
 }
 
+func TestBuildFetchBodyIncludesConfiguredLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	runtime.Config.Lang = i18n.LangEnUS
+
+	body := buildFetchBody(runtime)
+	if got := body["lang"]; got != "en_us" {
+		t.Fatalf("lang = %#v, want %q", got, "en_us")
+	}
+}
+
+func TestBuildFetchBodyExplicitLangOverridesConfiguredLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	runtime.Config.Lang = i18n.LangZhCN
+	if err := runtime.Cmd.Flags().Set("lang", "en_us"); err != nil {
+		t.Fatalf("set lang flag: %v", err)
+	}
+
+	body := buildFetchBody(runtime)
+	if got := body["lang"]; got != "en_us" {
+		t.Fatalf("lang = %#v, want %q", got, "en_us")
+	}
+}
+
+func TestBuildFetchBodyPassesExplicitUnsupportedLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	if err := runtime.Cmd.Flags().Set("lang", "unsupported_lang"); err != nil {
+		t.Fatalf("set lang flag: %v", err)
+	}
+
+	body := buildFetchBody(runtime)
+	if got := body["lang"]; got != "unsupported_lang" {
+		t.Fatalf("lang = %#v, want %q", got, "unsupported_lang")
+	}
+}
+
+func TestBuildFetchBodyOmitsUnrecognizedLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	runtime.Config.Lang = "bad_lang"
+
+	body := buildFetchBody(runtime)
+	if _, ok := body["lang"]; ok {
+		t.Fatalf("did not expect invalid lang in fetch body: %#v", body)
+	}
+}
+
 func newFetchBodyTestRuntime(ctx context.Context) *common.RuntimeContext {
 	cmd := &cobra.Command{Use: "+fetch"}
 	cmd.Flags().String("doc-format", "xml", "")
 	cmd.Flags().String("detail", "simple", "")
+	cmd.Flags().String("lang", "", "")
 	cmd.Flags().Int("revision-id", -1, "")
 	cmd.Flags().String("scope", "full", "")
 	cmd.Flags().String("start-block-id", "", "")
@@ -70,7 +126,7 @@ func newFetchBodyTestRuntime(ctx context.Context) *common.RuntimeContext {
 	cmd.Flags().Int("context-before", 0, "")
 	cmd.Flags().Int("context-after", 0, "")
 	cmd.Flags().Int("max-depth", -1, "")
-	return common.TestNewRuntimeContextWithCtx(ctx, cmd, nil)
+	return common.TestNewRuntimeContextWithCtx(ctx, cmd, &core.CliConfig{})
 }
 
 func newCreateBodyTestRuntime(ctx context.Context) *common.RuntimeContext {
