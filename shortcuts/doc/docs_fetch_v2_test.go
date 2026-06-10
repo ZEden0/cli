@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/larksuite/cli/internal/core"
+	"github.com/larksuite/cli/internal/i18n"
 	"github.com/larksuite/cli/shortcuts/common"
 	"github.com/spf13/cobra"
 )
@@ -56,6 +58,46 @@ func TestBuildFetchBodyOmitsEmptyScene(t *testing.T) {
 	body := buildFetchBody(runtime)
 	if _, ok := body["scene"]; ok {
 		t.Fatalf("did not expect empty scene in fetch body: %#v", body)
+	}
+}
+
+func TestBuildFetchBodyIncludesExplicitLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	if err := runtime.Cmd.Flags().Set("lang", "EN"); err != nil {
+		t.Fatalf("set lang: %v", err)
+	}
+
+	body := buildFetchBody(runtime)
+	if got, want := body["lang"], "en_us"; got != want {
+		t.Fatalf("lang = %#v, want %q", got, want)
+	}
+}
+
+func TestBuildFetchBodyDefaultsLangFromProfile(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	runtime.Config = &core.CliConfig{Lang: i18n.LangJaJP}
+
+	body := buildFetchBody(runtime)
+	if got, want := body["lang"], "ja_jp"; got != want {
+		t.Fatalf("lang = %#v, want %q", got, want)
+	}
+}
+
+func TestBuildFetchBodyPassesUnknownNormalizedLang(t *testing.T) {
+	t.Parallel()
+
+	runtime := newFetchBodyTestRuntime(context.Background())
+	if err := runtime.Cmd.Flags().Set("lang", "XX-YY"); err != nil {
+		t.Fatalf("set lang: %v", err)
+	}
+
+	body := buildFetchBody(runtime)
+	if got, want := body["lang"], "xx_yy"; got != want {
+		t.Fatalf("lang = %#v, want %q", got, want)
 	}
 }
 
@@ -147,6 +189,7 @@ func newFetchBodyTestRuntime(ctx context.Context) *common.RuntimeContext {
 	cmd.Flags().Int("context-before", 0, "")
 	cmd.Flags().Int("context-after", 0, "")
 	cmd.Flags().Int("max-depth", -1, "")
+	cmd.Flags().String("lang", "", "")
 	return common.TestNewRuntimeContextWithCtx(ctx, cmd, nil)
 }
 
@@ -166,6 +209,7 @@ func newFetchShortcutTestRuntime(t *testing.T, apiVersion string, setFlags map[s
 	cmd.Flags().Int("context-before", 0, "")
 	cmd.Flags().Int("context-after", 0, "")
 	cmd.Flags().Int("max-depth", -1, "")
+	cmd.Flags().String("lang", "", "")
 	cmd.Flags().String("offset", "", "")
 	cmd.Flags().String("limit", "", "")
 	if apiVersion != "" {

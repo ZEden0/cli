@@ -10,6 +10,9 @@ lark-cli docs +fetch --api-version v2 --doc "https://xxx.feishu.cn/docx/Z1Fj...t
 # Markdown 格式
 lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --doc-format markdown
 
+# 指定引用用户名称语言（不传时使用当前 profile lang）
+lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --lang en_us
+
 # 带 block ID（用于后续 block 级更新）
 lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc --detail with-ids
 
@@ -109,6 +112,7 @@ lark-cli docs +fetch --api-version v2 --doc Z1Fj...tnAc \
 | `--context-before` | 否 | 命中前拉几个兄弟块（仅对顶层单元生效，默认 `0`） |
 | `--context-after` | 否 | 命中后拉几个兄弟块（仅对顶层单元生效，默认 `0`） |
 | `--max-depth` | 否 | `outline` = 标题层级上限；其它 = 子树深度（`-1` 不限，默认） |
+| `--lang` | 否 | 引用用户名称语言，影响 `<cite type="user">` 的 `user-name` 补全；支持 `zh`/`en`/`ja` 简写并归一化为 `zh_cn`/`en_us`/`ja_jp`，不传时使用当前 profile lang |
 | `--format` | 否 | `json`（默认）\| `pretty` |
 
 ## 图片、文件、画板的处理

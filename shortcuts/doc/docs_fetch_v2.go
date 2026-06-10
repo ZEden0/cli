@@ -27,6 +27,7 @@ func v2FetchFlags() []common.Flag {
 		{Name: "context-before", Desc: "range/keyword/section context: sibling blocks before selected top-level blocks", Type: "int", Default: "0"},
 		{Name: "context-after", Desc: "range/keyword/section context: sibling blocks after selected top-level blocks", Type: "int", Default: "0"},
 		{Name: "max-depth", Desc: "outline heading level cap; other scopes subtree depth where -1 is unlimited and 0 is block only", Type: "int", Default: "-1"},
+		{Name: "lang", Desc: "override cite user-name language for XML/Markdown output; defaults to profile lang when set, e.g. zh_cn, en_us, ja_jp"},
 	}
 }
 
@@ -113,9 +114,36 @@ func buildFetchBody(runtime *common.RuntimeContext) map[string]interface{} {
 	if ro := buildReadOption(runtime); ro != nil {
 		body["read_option"] = ro
 	}
+	if lang := resolveFetchLang(runtime); lang != "" {
+		body["lang"] = lang
+	}
 	injectDocsScene(runtime, body)
 
 	return body
+}
+
+func resolveFetchLang(runtime *common.RuntimeContext) string {
+	if lang := normalizeFetchLang(runtime.Str("lang")); lang != "" {
+		return lang
+	}
+	if runtime.Config == nil {
+		return ""
+	}
+	return normalizeFetchLang(string(runtime.Config.Lang))
+}
+
+func normalizeFetchLang(raw string) string {
+	lang := strings.ReplaceAll(strings.ToLower(strings.TrimSpace(raw)), "-", "_")
+	switch lang {
+	case "zh":
+		return "zh_cn"
+	case "en":
+		return "en_us"
+	case "ja", "jp":
+		return "ja_jp"
+	default:
+		return lang
+	}
 }
 
 // buildReadOption 拼装 read_option JSON；full/空模式返回 nil，让服务端走默认全文路径。
