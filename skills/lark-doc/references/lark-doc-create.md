@@ -11,6 +11,8 @@
 
 > **⚠️ 格式选择规则：** 创建 / 导入场景下 XML 和 Markdown 都可以——用户提供 `.md` 本地文件、或明确说"导入 Markdown"时，直接用 Markdown；没有明确指示时默认 XML（表达能力更强，支持 callout、grid、checkbox 等富 block 类型）。不要在用户没要求的情况下主动从 XML 切到 Markdown，也不要在用户已给出 Markdown 时强行改成 XML。
 
+> **本地文件输入：** `--content @path` 只接受 cwd 内相对路径（如 `@./draft.md`）；用户给绝对路径时，先进入文件目录再用 `@./filename`。
+
 ## 命令
 
 ```bash

@@ -16,6 +16,8 @@
 >
 > **Markdown 局限 & block ID 前提：** Markdown 不携带 block ID，也无样式（颜色、对齐、callout 等）。需要按 block ID 定位（`block_*` 指令的 `--block-id`）时，先 `docs +fetch --api-version v2 --detail with-ids` **配合 `--scope`（`outline` / `range` / `keyword` / `section`）局部获取**目标段落，不要全量 fetch。拿到 block ID 后 `--content` 仍可用 Markdown，只是写入内容不带样式。
 
+> **本地文件输入：** `--content @path` 只接受 cwd 内相对路径（如 `@./file.md`）；用户给绝对路径时，先进入文件目录再用 `@./filename`。
+
 ## 参数
 
 | 参数 | 必填 | 说明 |
@@ -67,7 +69,7 @@ lark-cli docs +update --api-version v2 --doc "<doc_id>" --command str_replace \
   --doc-format markdown --pattern "旧内容" --content "新内容"
 
 # Markdown 模式下支持跨行匹配（--pattern 与 --content 都需要真实换行；"..."/'...' 里的 \n 是字面量）
-# 多行内容推荐 heredoc 或 --content @file.md，避免 shell 转义踩坑
+# 多行内容推荐 heredoc 或本地文件输入，避免 shell 转义踩坑
 lark-cli docs +update --api-version v2 --doc "<doc_id>" --command str_replace \
   --doc-format markdown \
   --pattern "$(printf '## 旧标题\n\n第一段原文\n\n第二段原文')" \
