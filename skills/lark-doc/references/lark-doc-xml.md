@@ -50,7 +50,8 @@ p, h1-h9, ul, ol, li, table, thead, tbody, tr, th, td, blockquote, pre, code, hr
 - `<task>` — `<task task-id="GUID"></task>`，必传 task-id（任务 guid）
 - `<chat_card>` — `<chat_card chat-id="CHAT_ID"></chat_card>`，必传 chat-id
 - `<sub-page-list>` — `<sub-page-list></sub-page-list>` 子页面列表块；仅 wiki 文档可插入
-- bitable、base_ref、synced_reference、synced_source、okr — 不可创建，仅支持移动
+- bitable、base_ref、synced_reference、synced_source — 不可创建，仅支持移动
+- `<okr>` — 详见「补充规则 / OKR block」
 
 # 四、块级复制与移动
 
@@ -98,6 +99,34 @@ p, h1-h9, ul, ol, li, table, thead, tbody, tr, th, td, blockquote, pre, code, hr
 - `<th>` / `<td>` 增加 `background-color` 和 `vertical-align`（top | middle | bottom）
 - 有表头时第一行在 `<thead>` 用 `<th>`，其余在 `<tbody>` 用 `<td>`
 - 合并单元格仅起始格输出 `colspan` / `rowspan`，被合并的格不出现
+
+## OKR block
+OKR block 可用 XML 格式完整表达。创建前先参考 [`lark-okr`](../../lark-okr/SKILL.md) 确认可用周期；创建时只写 root-only `<okr cycle-id="..."/>` 挂载已有 OKR，不构造 Objective/KR/Progress 子树。
+获取时，XML 结构示例如下：
+
+```xml
+<okr cycle-id="CYCLE_ID" cycle-name="CYCLE_NAME" user-name="USER_NAME">
+  <okr-objective objective-id="OBJECTIVE_ID" status="normal" percent="80" score="75">
+    <p>O 描述</p>
+    <okr-progress>
+      <p>O 进展</p>
+    </okr-progress>
+    <okr-key-result key-result-id="KEY_RESULT_ID" status="risk" percent="60" score="80">
+      <p>KR 描述</p>
+      <okr-progress>
+        <p>KR 进展</p>
+      </okr-progress>
+    </okr-key-result>
+  </okr-objective>
+</okr>
+```
+
+- `cycle-id` 仅用于创建时挂载已有当前周期 OKR；`cycle-name`、`user-name` 只读。
+- `objective-id`、`key-result-id` 为只读业务 ID，更新已有 OKR 时保持不变。
+- `okr-objective` / `okr-key-result`
+  - 可更新 `status`、`percent`、`score` ；`percent` / `score` 取值 0-100，`status` 取值 `unset`/`normal`/`risk`/`extended`。
+  - 不可更新 objective 和 key-result 内容描述。
+- `okr-progress` 承载进展内容，支持更新。
 
 # 六、美化系统
 - 颜色优先使用命名色，也可写 `rgb(r,g,b)` / `rgba(r,g,b,a)`。**基础色（7 色）**：red, orange, yellow, green, blue, purple, gray
