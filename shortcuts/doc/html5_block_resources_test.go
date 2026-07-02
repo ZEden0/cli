@@ -359,6 +359,183 @@ func TestDocsFetchV2HTML5BlockLargeReferenceMapUsesPath(t *testing.T) {
 	}
 }
 
+func TestDocsFetchV2ISVBlockLargeReferenceMapUsesRevisionPath(t *testing.T) {
+	dir := t.TempDir()
+	cmdutil.TestChdir(t, dir)
+
+	largeData := `{"payload":"` + strings.Repeat("x", html5BlockReferenceMaxRaw+1) + `"}`
+	f, stdout, _, reg := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-fetch-large"))
+	registerDocsAIStub(reg, "POST", "/open-apis/docs_ai/v1/documents/doxcn_fetch/fetch", map[string]interface{}{
+		"document": map[string]interface{}{
+			"document_id": "doxcn_fetch",
+			"revision_id": float64(7),
+			"content":     `<docx><isv-block type="aeolus_dashboard_insight" data-ref="isv_1"></isv-block></docx>`,
+			"reference_map": map[string]interface{}{
+				"isv-block": map[string]interface{}{
+					"isv_1": map[string]interface{}{"data": largeData},
+				},
+			},
+		},
+	})
+
+	err := mountAndRunDocs(t, DocsFetch, []string{
+		"+fetch",
+		"--api-version", "v2",
+		"--doc", "doxcn_fetch",
+		"--format", "json",
+		"--as", "user",
+	}, f, stdout)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	written := filepath.Join(dir, html5BlockReferenceRoot, "doxcn_fetch", "rev_7", isvBlockTag, "isv_1.data")
+	raw, err := os.ReadFile(written)
+	if err != nil {
+		t.Fatalf("ReadFile(%s) error: %v", written, err)
+	}
+	if string(raw) != largeData {
+		t.Fatalf("materialized isv data = %q", raw)
+	}
+	if strings.Contains(stdout.String(), largeData) {
+		t.Fatalf("large isv data should not be carried in stdout")
+	}
+
+	var envelope map[string]interface{}
+	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
+		t.Fatalf("decode stdout: %v\n%s", err, stdout.String())
+	}
+	data, _ := envelope["data"].(map[string]interface{})
+	doc, _ := data["document"].(map[string]interface{})
+	if got := doc["content"].(string); strings.Contains(got, `path="@`) || !strings.Contains(got, `data-ref="isv_1"`) {
+		t.Fatalf("content should keep data-ref and not path: %s", got)
+	}
+	refMap := decodeHTML5ReferenceMap(t, doc["reference_map"])
+	entry := refMap[isvBlockTag]["isv_1"]
+	if entry.Data != "" || entry.Path != "@doc-fetch-resources/doxcn_fetch/rev_7/isv-block/isv_1.data" {
+		t.Fatalf("large isv data should be represented as path, got %#v", entry)
+	}
+}
+
+func TestDocsCreateV2ISVBlockReferenceMapFromPath(t *testing.T) {
+	dir := t.TempDir()
+	cmdutil.TestChdir(t, dir)
+	if err := os.WriteFile("insight.data", []byte(`{"dashboard":"demo"}`), 0o600); err != nil {
+		t.Fatalf("WriteFile() error: %v", err)
+	}
+
+	f, stdout, _, reg := cmdutil.TestFactory(t, docsCreateTestConfig(t, ""))
+	stub := registerDocsAIStub(reg, "POST", "/open-apis/docs_ai/v1/documents", map[string]interface{}{
+		"document": map[string]interface{}{
+			"document_id": "doxcn_new_doc",
+			"revision_id": float64(1),
+		},
+	})
+
+	err := runDocsCreateShortcut(t, f, stdout, []string{
+		"+create",
+		"--api-version", "v2",
+		"--content", `<isv-block type="aeolus_dashboard_insight" path="@insight.data"></isv-block>`,
+		"--as", "user",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	body := decodeRequestBody(t, stub.CapturedBody)
+	if got := body["content"].(string); got != `<isv-block type="aeolus_dashboard_insight" data-ref="isv_1"></isv-block>` {
+		t.Fatalf("content = %q", got)
+	}
+	refMap := decodeHTML5ReferenceMap(t, body["reference_map"])
+	if got := refMap[isvBlockTag]["isv_1"].Data; got != `{"dashboard":"demo"}` {
+		t.Fatalf("reference_map isv data = %q", got)
+	}
+}
+
+func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "path and data-ref",
+			content: `<isv-block type="aeolus_dashboard_insight" path="@insight.data" data-ref="isv_1"></isv-block>`,
+			want:    "isv-block type cannot contain both path and data-ref",
+		},
+		{
+			name:    "non relative path",
+			content: `<isv-block type="aeolus_dashboard_insight" path="/tmp/insight.data"></isv-block>`,
+			want:    "isv-block type path",
+		},
+		{
+			name:    "internal data",
+			content: `<isv-block type="aeolus_dashboard_insight" data="internal"></isv-block>`,
+			want:    "isv-block type data is reserved for SDK internals",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, stdout, _, _ := cmdutil.TestFactory(t, docsCreateTestConfig(t, ""))
+			err := runDocsCreateShortcut(t, f, stdout, []string{
+				"+create",
+				"--api-version", "v2",
+				"--content", tt.content,
+				"--as", "user",
+			})
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("expected %q error, got: %v", tt.want, err)
+			}
+			for _, required := range []string{"isv-block", "type", "reference_map.isv-block"} {
+				if !strings.Contains(err.Error(), required) {
+					t.Fatalf("error %q should contain %q", err.Error(), required)
+				}
+			}
+		})
+	}
+}
+
+func TestISVBlockMarkdownCodeFenceIsIgnored(t *testing.T) {
+	for _, fence := range []string{"```", "~~~"} {
+		t.Run(fence, func(t *testing.T) {
+			content := fence + "xml\n<isv-block type=\"aeolus_dashboard_insight\" data-ref=\"isv_1\"></isv-block>\n" + fence + "\n"
+			if hasProcessableISVBlock("markdown", content) {
+				t.Fatalf("isv-block inside markdown code fence should be ignored")
+			}
+		})
+	}
+}
+
+func TestDocsUpdateV2ISVBlockDeleteDoesNotRequireReferenceMapData(t *testing.T) {
+	f, stdout, _, reg := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-delete"))
+	stub := registerDocsAIStub(reg, "PUT", "/open-apis/docs_ai/v1/documents/doxcn_doc", map[string]interface{}{
+		"document": map[string]interface{}{
+			"revision_id": float64(8),
+		},
+		"result": "success",
+	})
+
+	err := mountAndRunDocs(t, DocsUpdate, []string{
+		"+update",
+		"--api-version", "v2",
+		"--doc", "doxcn_doc",
+		"--command", "block_delete",
+		"--block-id", "blk_isv",
+		"--as", "user",
+	}, f, stdout)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	body := decodeRequestBody(t, stub.CapturedBody)
+	if _, ok := body["reference_map"]; ok {
+		t.Fatalf("block_delete should not require or send reference_map: %#v", body)
+	}
+	if got := body["command"]; got != "block_delete" {
+		t.Fatalf("command = %#v", got)
+	}
+}
+
 func TestDocsCreateV2HTML5BlockReferenceMapAdvancedInput(t *testing.T) {
 	f, stdout, _, reg := cmdutil.TestFactory(t, docsCreateTestConfig(t, ""))
 	stub := registerDocsAIStub(reg, "POST", "/open-apis/docs_ai/v1/documents", map[string]interface{}{
