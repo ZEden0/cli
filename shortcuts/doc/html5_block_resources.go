@@ -720,11 +720,7 @@ func processISVBlockReferenceMapForFetch(runtime *common.RuntimeContext, format 
 		if entry.Data == "" || len([]byte(entry.Data)) <= html5BlockReferenceMaxRaw {
 			continue
 		}
-		revisionID, err := documentRevisionIDForResourcePath(doc)
-		if err != nil {
-			return err
-		}
-		relPath, err := writeISVBlockReferenceFile(runtime, docToken, revisionID, ref, entry.Data)
+		relPath, err := writeISVBlockReferenceFile(runtime, docToken, ref, entry.Data)
 		if err != nil {
 			return err
 		}
@@ -1153,17 +1149,14 @@ func writeHTML5BlockReferenceFile(runtime *common.RuntimeContext, docToken strin
 	return relPath, nil
 }
 
-func writeISVBlockReferenceFile(runtime *common.RuntimeContext, docToken string, revisionID string, ref string, data string) (string, error) {
+func writeISVBlockReferenceFile(runtime *common.RuntimeContext, docToken string, ref string, data string) (string, error) {
 	if !isSafeHTML5BlockResourceName(docToken) {
 		return "", common.ValidationErrorf("document_id %q cannot be used as a resource directory name for isv-block type reference_map.isv-block.<ref>", docToken).WithParam("document_id")
-	}
-	if !isSafeHTML5BlockResourceName(revisionID) {
-		return "", common.ValidationErrorf("document revision_id %q cannot be used as a resource directory name for isv-block type reference_map.isv-block.<ref>", revisionID).WithParam("revision_id")
 	}
 	if !isSafeHTML5BlockResourceName(ref) {
 		return "", common.ValidationErrorf("isv-block type data-ref %q cannot be used as a file name for reference_map.isv-block.<ref>", ref).WithParam("data-ref")
 	}
-	relPath := filepath.Join(html5BlockReferenceRoot, docToken, "rev_"+revisionID, isvBlockTag, ref+".data")
+	relPath := filepath.Join(html5BlockReferenceRoot, docToken, ref+".data")
 	raw := []byte(data)
 	_, err := runtime.FileIO().Save(relPath, fileio.SaveOptions{
 		ContentType:   "application/octet-stream",
@@ -1176,43 +1169,6 @@ func writeISVBlockReferenceFile(runtime *common.RuntimeContext, docToken string,
 		return "", errs.NewInternalError(errs.SubtypeFileIO, "cannot write isv-block reference file %q: %v", relPath, err).WithCause(err)
 	}
 	return relPath, nil
-}
-
-func documentRevisionIDForResourcePath(doc map[string]interface{}) (string, error) {
-	switch v := doc["revision_id"].(type) {
-	case float64:
-		if v < 0 || v != float64(int64(v)) {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-		}
-		return fmt.Sprintf("%d", int64(v)), nil
-	case int:
-		if v < 0 {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-		}
-		return fmt.Sprintf("%d", v), nil
-	case int64:
-		if v < 0 {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-		}
-		return fmt.Sprintf("%d", v), nil
-	case json.Number:
-		n, err := v.Int64()
-		if err != nil {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id").WithCause(err)
-		}
-		if n < 0 {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-		}
-		return fmt.Sprintf("%d", n), nil
-	case string:
-		trimmed := strings.TrimSpace(v)
-		if trimmed == "" || !html5BlockSafeNamePattern.MatchString(trimmed) {
-			return "", common.ValidationErrorf("document.revision_id is required as an integer for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-		}
-		return trimmed, nil
-	default:
-		return "", common.ValidationErrorf("document.revision_id is required for isv-block type reference_map.isv-block.<ref> resource paths").WithParam("revision_id")
-	}
 }
 
 func isSafeHTML5BlockResourceName(name string) bool {

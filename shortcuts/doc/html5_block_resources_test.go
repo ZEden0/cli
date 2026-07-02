@@ -359,7 +359,7 @@ func TestDocsFetchV2HTML5BlockLargeReferenceMapUsesPath(t *testing.T) {
 	}
 }
 
-func TestDocsFetchV2ISVBlockLargeReferenceMapUsesRevisionPath(t *testing.T) {
+func TestDocsFetchV2ISVBlockLargeReferenceMapUsesFlatDocumentPath(t *testing.T) {
 	dir := t.TempDir()
 	cmdutil.TestChdir(t, dir)
 
@@ -368,7 +368,6 @@ func TestDocsFetchV2ISVBlockLargeReferenceMapUsesRevisionPath(t *testing.T) {
 	registerDocsAIStub(reg, "POST", "/open-apis/docs_ai/v1/documents/doxcn_fetch/fetch", map[string]interface{}{
 		"document": map[string]interface{}{
 			"document_id": "doxcn_fetch",
-			"revision_id": float64(7),
 			"content":     `<docx><isv-block type="aeolus_dashboard_insight" data-ref="isv_1"></isv-block></docx>`,
 			"reference_map": map[string]interface{}{
 				"isv-block": map[string]interface{}{
@@ -389,7 +388,7 @@ func TestDocsFetchV2ISVBlockLargeReferenceMapUsesRevisionPath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	written := filepath.Join(dir, html5BlockReferenceRoot, "doxcn_fetch", "rev_7", isvBlockTag, "isv_1.data")
+	written := filepath.Join(dir, html5BlockReferenceRoot, "doxcn_fetch", "isv_1.data")
 	raw, err := os.ReadFile(written)
 	if err != nil {
 		t.Fatalf("ReadFile(%s) error: %v", written, err)
@@ -412,7 +411,7 @@ func TestDocsFetchV2ISVBlockLargeReferenceMapUsesRevisionPath(t *testing.T) {
 	}
 	refMap := decodeHTML5ReferenceMap(t, doc["reference_map"])
 	entry := refMap[isvBlockTag]["isv_1"]
-	if entry.Data != "" || entry.Path != "@doc-fetch-resources/doxcn_fetch/rev_7/isv-block/isv_1.data" {
+	if entry.Data != "" || entry.Path != "@doc-fetch-resources/doxcn_fetch/isv_1.data" {
 		t.Fatalf("large isv data should be represented as path, got %#v", entry)
 	}
 }
