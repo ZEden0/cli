@@ -1,6 +1,6 @@
 # XML 扩展块补充说明
 
-本文件用于收敛低频使用、结构较重的 block XML 说明。常用标签和通用规则见 [`lark-doc-xml.md`](lark-doc-xml.md)；后续新增其他低频 block 时可继续追加到本文件。
+本文件用于补充说明 block XML 扩展能力。常用标签和通用规则见 [`lark-doc-xml.md`](lark-doc-xml.md)；后续新增其他 block 说明时可继续追加到本文件。
 
 ## OKR block
 
