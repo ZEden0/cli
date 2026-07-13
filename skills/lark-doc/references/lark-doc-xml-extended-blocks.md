@@ -33,5 +33,3 @@ OKR block 可用 XML 格式完整表达。创建前先参考 [`lark-okr`](../../
   - 可更新 `status`、`percent`、`score`；`percent` / `score` 取值 0-100，`status` 取值 `unset`/`normal`/`risk`/`extended`。
   - 不可更新 objective 和 key-result 内容描述。
 - `okr-progress` 承载进展内容，支持更新。直接子节点支持 `<p>`、`<checkbox>`、`<grid>`、`<img>`、`<source>`、`<ol>`、`<ul>`、`<h1>` 到 `<h9>`。
-- `<a>` 只作为行内标签使用，放在 `<p>` 或列表项内部；不要把 `<a>` 作为 `<okr-progress>` 的直接子节点。
-- `<li>` 只作为 `<ol>` / `<ul>` 的子节点使用；不要把 `<li>` 作为 `<okr-progress>` 的直接子节点。
