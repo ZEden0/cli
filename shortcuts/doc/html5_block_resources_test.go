@@ -458,21 +458,25 @@ func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 		content      string
 		referenceMap string
 		want         string
+		wantParam    string
 	}{
 		{
-			name:    "path and data-ref",
-			content: `<isv-block type="aeolus_dashboard_insight" path="@insight.data" data-ref="isv_1"></isv-block>`,
-			want:    "isv-block type cannot contain both path and data-ref",
+			name:      "path and data-ref",
+			content:   `<isv-block type="aeolus_dashboard_insight" path="@insight.data" data-ref="isv_1"></isv-block>`,
+			want:      "isv-block type cannot contain both path and data-ref",
+			wantParam: "isv-block",
 		},
 		{
-			name:    "non relative path",
-			content: `<isv-block type="aeolus_dashboard_insight" path="/tmp/insight.data"></isv-block>`,
-			want:    "isv-block type path",
+			name:      "non relative path",
+			content:   `<isv-block type="aeolus_dashboard_insight" path="/tmp/insight.data"></isv-block>`,
+			want:      "isv-block type path",
+			wantParam: "path",
 		},
 		{
-			name:    "internal data",
-			content: `<isv-block type="aeolus_dashboard_insight" data="internal"></isv-block>`,
-			want:    "isv-block type data is reserved for SDK internals",
+			name:      "internal data",
+			content:   `<isv-block type="aeolus_dashboard_insight" data="internal"></isv-block>`,
+			want:      "isv-block type data is reserved for SDK internals",
+			wantParam: "isv-block",
 		},
 	}
 	for _, tt := range tests {
@@ -491,6 +495,7 @@ func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q error, got: %v", tt.want, err)
 			}
+			assertValidationContract(t, err, errs.SubtypeInvalidArgument, tt.wantParam)
 			for _, required := range []string{"isv-block", "type", "reference_map.isv-block"} {
 				if !strings.Contains(err.Error(), required) {
 					t.Fatalf("error %q should contain %q", err.Error(), required)
@@ -565,6 +570,16 @@ func TestDocsUpdateV2ResultFailedReturnsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "copy source block is not supported") {
 		t.Fatalf("error should include service warning, got: %v", err)
+	}
+	problem, ok := errs.ProblemOf(err)
+	if !ok {
+		t.Fatalf("expected typed error, got: %T (%v)", err, err)
+	}
+	if problem.Category != errs.CategoryAPI {
+		t.Fatalf("category = %q, want %q", problem.Category, errs.CategoryAPI)
+	}
+	if problem.Subtype != errs.SubtypeServerError {
+		t.Fatalf("subtype = %q, want %q", problem.Subtype, errs.SubtypeServerError)
 	}
 }
 
