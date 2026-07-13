@@ -560,6 +560,10 @@ func prepareISVBlockWriteContent(runtime *common.RuntimeContext, format string, 
 			if !tag.hasAttr(isvBlockTypeAttr) {
 				return "", common.ValidationErrorf("isv-block requires type attribute before using path or reference_map.isv-block.<ref>").WithParam("type")
 			}
+			publicType, _ := tag.attr(isvBlockTypeAttr)
+			if strings.TrimSpace(publicType) == "" {
+				return "", common.ValidationErrorf("isv-block type cannot be empty; expected a configured type before using path or reference_map.isv-block.<ref>").WithParam("type")
+			}
 			if tag.hasAttr(html5BlockDataAttr) {
 				return "", common.ValidationErrorf("isv-block type data is reserved for SDK internals; use data-ref with reference_map.isv-block.<ref> or path=\"@relative.data\"").WithParam("isv-block")
 			}
@@ -819,6 +823,10 @@ func validateFetchedISVBlockRefs(format string, content string, refMap html5Bloc
 			}
 			if !tag.hasAttr(isvBlockTypeAttr) {
 				return raw, common.ValidationErrorf("fetched isv-block is missing type; cannot resolve reference_map.isv-block.<ref>").WithParam("type")
+			}
+			publicType, _ := tag.attr(isvBlockTypeAttr)
+			if strings.TrimSpace(publicType) == "" {
+				return raw, common.ValidationErrorf("fetched isv-block type cannot be empty; cannot resolve reference_map.isv-block.<ref>").WithParam("type")
 			}
 			ref, ok := tag.attr(html5BlockDataRefAttr)
 			if !ok || strings.TrimSpace(ref) == "" {

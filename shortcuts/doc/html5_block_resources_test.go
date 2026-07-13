@@ -363,7 +363,7 @@ func TestDocsFetchV2ISVBlockLargeReferenceMapUsesFlatDocumentPath(t *testing.T) 
 	dir := t.TempDir()
 	cmdutil.TestChdir(t, dir)
 
-	largeData := `{"payload":"` + strings.Repeat("x", html5BlockReferenceMaxRaw+1) + `"}`
+	largeData := `{"payload":"` + strings.Repeat("x", html5BlockReferenceMaxRaw+1) + `"}` + "\n"
 	f, stdout, _, reg := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-fetch-large"))
 	registerDocsAIStub(reg, "POST", "/open-apis/docs_ai/v1/documents/doxcn_fetch/fetch", map[string]interface{}{
 		"document": map[string]interface{}{
@@ -419,7 +419,8 @@ func TestDocsFetchV2ISVBlockLargeReferenceMapUsesFlatDocumentPath(t *testing.T) 
 func TestDocsCreateV2ISVBlockReferenceMapFromPath(t *testing.T) {
 	dir := t.TempDir()
 	cmdutil.TestChdir(t, dir)
-	if err := os.WriteFile("insight.data", []byte(`{"dashboard":"demo"}`), 0o600); err != nil {
+	rawData := `{"dashboard":"demo"}` + "\n"
+	if err := os.WriteFile("insight.data", []byte(rawData), 0o600); err != nil {
 		t.Fatalf("WriteFile() error: %v", err)
 	}
 
@@ -446,16 +447,17 @@ func TestDocsCreateV2ISVBlockReferenceMapFromPath(t *testing.T) {
 		t.Fatalf("content = %q", got)
 	}
 	refMap := decodeHTML5ReferenceMap(t, body["reference_map"])
-	if got := refMap[isvBlockTag]["isv_1"].Data; got != `{"dashboard":"demo"}` {
+	if got := refMap[isvBlockTag]["isv_1"].Data; got != rawData {
 		t.Fatalf("reference_map isv data = %q", got)
 	}
 }
 
 func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 	tests := []struct {
-		name    string
-		content string
-		want    string
+		name         string
+		content      string
+		referenceMap string
+		want         string
 	}{
 		{
 			name:    "path and data-ref",
@@ -472,16 +474,26 @@ func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 			content: `<isv-block type="aeolus_dashboard_insight" data="internal"></isv-block>`,
 			want:    "isv-block type data is reserved for SDK internals",
 		},
+		{
+			name:         "blank type",
+			content:      `<isv-block type=" " data-ref="isv_1"></isv-block>`,
+			referenceMap: `{"isv-block":{"isv_1":{"data":"raw"}}}`,
+			want:         "isv-block type cannot be empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f, stdout, _, _ := cmdutil.TestFactory(t, docsCreateTestConfig(t, ""))
-			err := runDocsCreateShortcut(t, f, stdout, []string{
+			args := []string{
 				"+create",
 				"--api-version", "v2",
 				"--content", tt.content,
 				"--as", "user",
-			})
+			}
+			if tt.referenceMap != "" {
+				args = append(args, "--reference-map", tt.referenceMap)
+			}
+			err := runDocsCreateShortcut(t, f, stdout, args)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("expected %q error, got: %v", tt.want, err)
 			}
@@ -532,6 +544,85 @@ func TestDocsUpdateV2ISVBlockDeleteDoesNotRequireReferenceMapData(t *testing.T) 
 	}
 	if got := body["command"]; got != "block_delete" {
 		t.Fatalf("command = %#v", got)
+	}
+}
+
+func TestDocsUpdateV2ResultFailedReturnsError(t *testing.T) {
+	f, stdout, _, reg := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-copy-failed"))
+	registerDocsAIStub(reg, "PUT", "/open-apis/docs_ai/v1/documents/doxcn_doc", map[string]interface{}{
+		"document": map[string]interface{}{
+			"revision_id": float64(9),
+		},
+		"result":   "failed",
+		"warnings": []interface{}{"copy source block is not supported"},
+	})
+
+	err := mountAndRunDocs(t, DocsUpdate, []string{
+		"+update",
+		"--api-version", "v2",
+		"--doc", "doxcn_doc",
+		"--command", "block_copy_insert_after",
+		"--block-id", "blk_anchor",
+		"--src-block-ids", "blk_isv",
+		"--as", "user",
+	}, f, stdout)
+	if err == nil || !strings.Contains(err.Error(), "result=failed") {
+		t.Fatalf("expected result=failed error, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "copy source block is not supported") {
+		t.Fatalf("error should include service warning, got: %v", err)
+	}
+}
+
+func TestDocsUpdateV2ISVBlockRejectsBlankType(t *testing.T) {
+	f, stdout, _, _ := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-update-blank-type"))
+	err := mountAndRunDocs(t, DocsUpdate, []string{
+		"+update",
+		"--api-version", "v2",
+		"--doc", "doxcn_doc",
+		"--command", "append",
+		"--content", `<isv-block type=" " data-ref="isv_1"></isv-block>`,
+		"--reference-map", `{"isv-block":{"isv_1":{"data":"raw"}}}`,
+		"--as", "user",
+	}, f, stdout)
+	if err == nil || !strings.Contains(err.Error(), "isv-block type cannot be empty") {
+		t.Fatalf("expected blank type error, got: %v", err)
+	}
+}
+
+func TestDocsUpdateV2ISVBlockReferenceMapPathPreservesTrailingNewline(t *testing.T) {
+	dir := t.TempDir()
+	cmdutil.TestChdir(t, dir)
+	rawData := "raw\n"
+	if err := os.WriteFile("insight.data", []byte(rawData), 0o600); err != nil {
+		t.Fatalf("WriteFile() error: %v", err)
+	}
+
+	f, stdout, _, reg := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-update-newline"))
+	stub := registerDocsAIStub(reg, "PUT", "/open-apis/docs_ai/v1/documents/doxcn_doc", map[string]interface{}{
+		"document": map[string]interface{}{
+			"revision_id": float64(10),
+		},
+		"result": "success",
+	})
+
+	err := mountAndRunDocs(t, DocsUpdate, []string{
+		"+update",
+		"--api-version", "v2",
+		"--doc", "doxcn_doc",
+		"--command", "append",
+		"--content", `<isv-block type="aeolus_dashboard_insight" data-ref="isv_1"></isv-block>`,
+		"--reference-map", `{"isv-block":{"isv_1":{"path":"@insight.data"}}}`,
+		"--as", "user",
+	}, f, stdout)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	body := decodeRequestBody(t, stub.CapturedBody)
+	refMap := decodeHTML5ReferenceMap(t, body["reference_map"])
+	if got := refMap[isvBlockTag]["isv_1"].Data; got != rawData {
+		t.Fatalf("reference_map isv data = %q", got)
 	}
 }
 
