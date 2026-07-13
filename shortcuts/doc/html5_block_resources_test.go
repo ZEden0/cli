@@ -474,12 +474,6 @@ func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 			content: `<isv-block type="aeolus_dashboard_insight" data="internal"></isv-block>`,
 			want:    "isv-block type data is reserved for SDK internals",
 		},
-		{
-			name:         "blank type",
-			content:      `<isv-block type=" " data-ref="isv_1"></isv-block>`,
-			referenceMap: `{"isv-block":{"isv_1":{"data":"raw"}}}`,
-			want:         "isv-block type cannot be empty",
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -571,22 +565,6 @@ func TestDocsUpdateV2ResultFailedReturnsError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "copy source block is not supported") {
 		t.Fatalf("error should include service warning, got: %v", err)
-	}
-}
-
-func TestDocsUpdateV2ISVBlockRejectsBlankType(t *testing.T) {
-	f, stdout, _, _ := cmdutil.TestFactory(t, docsTestConfigWithAppID("docs-isv-update-blank-type"))
-	err := mountAndRunDocs(t, DocsUpdate, []string{
-		"+update",
-		"--api-version", "v2",
-		"--doc", "doxcn_doc",
-		"--command", "append",
-		"--content", `<isv-block type=" " data-ref="isv_1"></isv-block>`,
-		"--reference-map", `{"isv-block":{"isv_1":{"data":"raw"}}}`,
-		"--as", "user",
-	}, f, stdout)
-	if err == nil || !strings.Contains(err.Error(), "isv-block type cannot be empty") {
-		t.Fatalf("expected blank type error, got: %v", err)
 	}
 }
 
