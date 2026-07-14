@@ -478,6 +478,12 @@ func TestDocsCreateV2ISVBlockRejectsInvalidAttributes(t *testing.T) {
 			want:      "isv-block type data is reserved for SDK internals",
 			wantParam: "isv-block",
 		},
+		{
+			name:      "missing type",
+			content:   `<isv-block path="@insight.data"></isv-block>`,
+			want:      "isv-block requires type attribute",
+			wantParam: "type",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
